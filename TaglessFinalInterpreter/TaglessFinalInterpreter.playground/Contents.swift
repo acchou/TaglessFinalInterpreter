@@ -97,7 +97,7 @@ class StringMulSym: StringExpSym, MulSym {
 }
 
 func tfm1<E: MulSym>(_ v: E) -> E.repr {
-    return v.add(v.lit(7), v.neg(v.mul(v.lit(1), v.lit(2))))
+    return v.add(v.lit(8), v.neg(v.mul(v.lit(1), v.lit(2))))
 }
 
 func tfm2<E: MulSym>(_ v: E) -> E.repr {
