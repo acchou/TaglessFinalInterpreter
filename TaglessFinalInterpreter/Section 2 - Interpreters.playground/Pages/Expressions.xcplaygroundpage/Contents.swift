@@ -1,11 +1,11 @@
-//: Playground - noun: a place where people can play
+//: A playground for the paper "[Typed Tagless Final Interpreters](http://okmij.org/ftp/tagless-final/course/lecture.pdf)"
 
 import Cocoa
 
-//  Examples from this paper: http://okmij.org/ftp/tagless-final/course/lecture.pdf
+//  Examples from this paper:
 
 //
-// Section 2.1: "initial" embedding based on algebraic data types
+// Page 3: "initial" embedding based on algebraic data types
 //
 indirect enum Exp {
     case Lit(Int)
@@ -25,7 +25,9 @@ func eval(_ e: Exp) -> Int {
 
 let result1 = eval(ti1)
 
-// pretty printing using initial embedding
+//
+// Page 4: pretty printing using initial embedding
+//
 func view(_ e: Exp) -> String {
     switch e {
     case let .Lit(n): return "\(n)"
@@ -64,8 +66,9 @@ func tf1<E: ExpSym>(_ v: E) -> E.repr {
 let tf2: Int = tf1(IntExpSym())
 let ts2: String = tf1(StringExpSym())
 
+
 //
-// Section 2.2: expression problem
+// Page 7: expression problem
 //
 
 
@@ -105,66 +108,5 @@ func tfm2<E: MulSym>(_ v: E) -> E.repr {
 let tfmi1 = tfm1(IntMulSym())
 let tfms1 = tfm1(StringMulSym())
 
-//
-// Section 2.3: de-serialization
-//
-
-// Oddly, for a paper that is about the final embedding, the author chose to describe Tree as an initial embedding.
-indirect enum Tree {
-    case Leaf(String)
-    case Node(String, [Tree])
-}
-
-func showTree(tree: Tree) -> String {
-    switch tree {
-    case let .Leaf(str): return "Leaf \(String(reflecting: str))"
-    case let .Node(str, subtrees):
-        let showSubtrees = subtrees.map(showTree).joined(separator: ", ")
-        return "Node \(String(reflecting: str)) [\(showSubtrees)]"
-    }
-}
-
-class TreeSym: ExpSym {
-    typealias repr = Tree
-
-    func lit(_ n: Int) -> Tree {
-        return .Node("Lit", [.Leaf(String(n))])
-    }
-
-    func neg(_ e: Tree) -> Tree {
-        return .Node("Neg", [e])
-    }
-
-    func add(_ e1: Tree, _ e2: Tree) -> Tree {
-        return .Node("Add", [e1, e2])
-    }
-}
-
-let tf1_tree = tf1(TreeSym())
-showTree(tree: tf1_tree)
-
-func fromTree<E: ExpSym>(_ tree: Tree, _ e: E) -> E.repr? {
-    switch tree {
-    case let .Node("Lit", subtree) where subtree.count == 1:
-        if case let .Leaf(str) = subtree[0], let n = Int(str) {
-            return e.lit(n)
-        }
-        return nil
-    case let .Node("Neg", subtree) where subtree.count == 1:
-        if let subexpr = fromTree(subtree[0], e) {
-            return e.neg(subexpr)
-        }
-        return nil
-    case let .Node("Add", subtree) where subtree.count == 2:
-        if let a = fromTree(subtree[0], e), let b = fromTree(subtree[1], e) {
-            return e.add(a, b)
-        }
-        return nil
-    default:
-        return nil
-    }
-}
-
-let tf1_eval = fromTree(tf1_tree, StringExpSym())
-
+//: [Next](@next)
 
