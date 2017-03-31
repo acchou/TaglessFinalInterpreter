@@ -250,3 +250,48 @@ if let (val, (str, tree)) = fromMulTree(tmtree)(multiMulSym) {
     print("tree: \(tree)")
 }
 
+//
+// Section 2.4: Pattern Matching
+//
+
+// Using the Initial style
+func pushNeg(_ e: Exp) -> Exp {
+    switch e {
+    case .Lit(_): return e
+    case .Neg(.Lit(_)): return e
+    case let .Neg(.Neg(e)): return pushNeg(e)
+    case let .Neg(.Add(e1, e2)): return .Add(pushNeg(.Neg(e1)), pushNeg(.Neg(e2)))
+    case let .Add(e1, e2): return .Add(pushNeg(e1), pushNeg(e2))
+    }
+}
+
+let ti1_norm = pushNeg(ti1)
+view(ti1_norm)
+eval(ti1_norm)
+
+// Using the Final style
+
+enum Ctx { case Pos, Neg }
+
+class ExpPushNegSym<E: ExpSym>: ExpSym {
+    typealias repr = (Ctx) -> E.repr
+    let e: E
+
+    init(_ e: E) {
+        self.e = e
+    }
+
+    func lit(_ n: Int) -> (Ctx) -> E.repr {
+        return { $0 == .Pos ? self.e.lit(n) : self.e.neg(self.e.lit(n)) }
+    }
+
+    func neg(_ e: @escaping (Ctx) -> E.repr) -> (Ctx) -> E.repr {
+        return { $0 == .Pos ? e(.Neg) : e(.Pos) }
+    }
+
+    func add(_ e1: @escaping (Ctx) -> E.repr, _ e2: @escaping (Ctx) -> E.repr) -> (Ctx) -> E.repr {
+        return { self.e.add(e1($0), e2($0)) }
+    }
+}
+
+
