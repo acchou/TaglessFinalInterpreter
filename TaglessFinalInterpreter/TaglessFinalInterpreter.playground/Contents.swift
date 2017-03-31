@@ -115,12 +115,14 @@ indirect enum Tree {
     case Node(String, [Tree])
 }
 
-func showTree(tree: Tree) -> String {
-    switch tree {
-    case let .Leaf(str): return "Leaf \(String(reflecting: str))"
-    case let .Node(str, subtrees):
-        let showSubtrees = subtrees.map(showTree).joined(separator: ", ")
-        return "Node \(String(reflecting: str)) [\(showSubtrees)]"
+extension Tree: CustomStringConvertible {
+    var description: String {
+        switch self {
+        case let .Leaf(str): return "Leaf '\(str)'"
+        case let .Node(str, subtrees):
+            let showSubtrees = subtrees.map { $0.description }.joined(separator: ", ")
+            return "Node '\(str)' [\(showSubtrees)]"
+        }
     }
 }
 
@@ -141,7 +143,7 @@ class TreeSym: ExpSym {
 }
 
 let tf1_tree = tf1(TreeSym())
-showTree(tree: tf1_tree)
+tf1_tree.description
 
 func fromTree<E: ExpSym>(_ tree: Tree) -> (_ e: E) -> E.repr? {
     return { e in
@@ -174,8 +176,77 @@ let tf1_string = fromTree(tf1_tree)(StringExpSym())
 
 let tf1_eval = fromTree(tf1_tree)(IntExpSym())
 
-//class DuplicateSym<R>: ExpSym where R: (A, B), A: ExpSym, B: ExpSym {
-//    typealias repr = R
-//}
+class DuplicateSym<E1, E2>: ExpSym where E1: ExpSym, E2: ExpSym {
+    typealias R1 = E1.repr
+    typealias R2 = E2.repr
+    typealias repr = (R1, R2)
+    let e1: E1
+    let e2: E2
 
+    init(_ e1: E1, _ e2: E2) {
+        self.e1 = e1
+        self.e2 = e2
+    }
+
+    func lit(_ n: Int) -> (R1, R2) {
+        return (e1.lit(n), e2.lit(n))
+    }
+
+    func neg(_ e: (R1, R2)) -> (R1, R2) {
+        return (e1.neg(e.0), e2.neg(e.1))
+    }
+
+    func add(_ e1: (R1, R2), _ e2: (R1, R2)) -> (R1, R2) {
+        return (self.e1.add(e1.0, e2.0), self.e2.add(e1.1, e2.1))
+    }
+}
+
+func >>=<E1: ExpSym, E2: ExpSym>(e1: E1, e2: E2) -> DuplicateSym<E1,E2> {
+    return DuplicateSym(e1, e2)
+}
+
+let multiSym = IntExpSym() >>= StringExpSym() >>= TreeSym()
+if let (val, (str, tree)) = fromTree(tf1_tree)(multiSym) {
+    print("val: \(val)")
+    print("str: \(str)")
+    print("tree: \(tree)")
+}
+
+
+// Adding mult to deserialization
+
+class TreeMulSym: TreeSym, MulSym {
+    func mul(_ e1: Tree, _ e2: Tree) -> Tree {
+        return .Node("Mul", [e1, e2])
+    }
+}
+
+func fromMulTree<E: MulSym>(_ tree: Tree) -> (_ e: E) -> E.repr? {
+    return { e in
+        if case let .Node("Mul", subtree) = tree, subtree.count == 2 {
+            if let a = fromTree(subtree[0])(e), let b = fromTree(subtree[1])(e) {
+                return e.mul(a, b)
+            }
+        }
+        return fromTree(tree)(e)
+    }
+}
+
+class DuplicateMulSym<E1, E2>: DuplicateSym<E1,E2>, MulSym where E1: MulSym, E2: MulSym {
+    func mul(_ e1: (R1, R2), _ e2: (R1, R2)) -> (R1, R2) {
+        return (self.e1.mul(e1.0, e2.0), self.e2.mul(e1.1, e2.1))
+    }
+}
+
+func tm1<E: MulSym>(_ e: E) -> E.repr {
+    return e.mul(e.add(e.lit(42), e.neg(e.lit(10))), e.lit(7))
+}
+
+let tmtree = tm1(TreeMulSym())
+let multiMulSym = DuplicateMulSym(IntMulSym(), DuplicateMulSym(StringMulSym(), TreeMulSym()))
+if let (val, (str, tree)) = fromMulTree(tmtree)(multiMulSym) {
+    print("val: \(val)")
+    print("str: \(str)")
+    print("tree: \(tree)")
+}
 
