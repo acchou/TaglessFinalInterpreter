@@ -143,28 +143,39 @@ class TreeSym: ExpSym {
 let tf1_tree = tf1(TreeSym())
 showTree(tree: tf1_tree)
 
-func fromTree<E: ExpSym>(_ tree: Tree, _ e: E) -> E.repr? {
-    switch tree {
-    case let .Node("Lit", subtree) where subtree.count == 1:
-        if case let .Leaf(str) = subtree[0], let n = Int(str) {
-            return e.lit(n)
+func fromTree<E: ExpSym>(_ tree: Tree) -> (_ e: E) -> E.repr? {
+    return { e in
+        switch tree {
+        case let .Node("Lit", subtree) where subtree.count == 1:
+            if case let .Leaf(str) = subtree[0], let n = Int(str) {
+                return e.lit(n)
+            }
+            return nil
+        case let .Node("Neg", subtree) where subtree.count == 1:
+            if let subexpr = fromTree(subtree[0])(e) {
+                return e.neg(subexpr)
+            }
+            return nil
+        case let .Node("Add", subtree) where subtree.count == 2:
+            if let a = fromTree(subtree[0])(e), let b = fromTree(subtree[1])(e) {
+                return e.add(a, b)
+            }
+            return nil
+        default:
+            return nil
         }
-        return nil
-    case let .Node("Neg", subtree) where subtree.count == 1:
-        if let subexpr = fromTree(subtree[0], e) {
-            return e.neg(subexpr)
-        }
-        return nil
-    case let .Node("Add", subtree) where subtree.count == 2:
-        if let a = fromTree(subtree[0], e), let b = fromTree(subtree[1], e) {
-            return e.add(a, b)
-        }
-        return nil
-    default:
-        return nil
     }
 }
 
-let tf1_eval = fromTree(tf1_tree, StringExpSym())
+// The following line shows that a polymorphic function can't be returned from a function. The returned function must have a concrete type inferred.
+// let tree_fn = fromTree(tf1_tree)
+
+let tf1_string = fromTree(tf1_tree)(StringExpSym())
+
+let tf1_eval = fromTree(tf1_tree)(IntExpSym())
+
+//class DuplicateSym<R>: ExpSym where R: (A, B), A: ExpSym, B: ExpSym {
+//    typealias repr = R
+//}
 
 
