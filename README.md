@@ -172,5 +172,14 @@ The object algebra pattern can be used to create new protocols that have
 additional expressions, which extend the original protocol in ways that
 protocol extensions cannot.
 
+## Conclusion
+
+The going gets tough when we start to get into more elaborate use of Haskell's
+type classes, which aren't easily simulated in Swift. The sticking point
+appears to be not having dynamic polymorphic data structures. The playground
+examples end before the paper actually gets into the tagless final interpreter
+implementation, so the name of this repo is ironic. It should probably be
+called "Object Algebras in Swift."
+
 [Object Algebras]: https://www.cs.utexas.edu/~wcook/Drafts/2012/ecoop2012.pdf
 [Expression Problem]: http://i.cs.hku.hk/~bruno/oa/
