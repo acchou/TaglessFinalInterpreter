@@ -273,6 +273,7 @@ eval(ti1_norm)
 
 enum Ctx { case Pos, Neg }
 
+// The final style of pattern matching doesn't really translate well to Swift because functions cannot be built up from argument pattern matching
 class ExpPushNegSym<E: ExpSym>: ExpSym {
     typealias repr = (Ctx) -> E.repr
     let e: E
@@ -281,17 +282,17 @@ class ExpPushNegSym<E: ExpSym>: ExpSym {
         self.e = e
     }
 
-    func lit(_ n: Int) -> (Ctx) -> E.repr {
+    func lit(_ n: Int) -> repr {
         return { $0 == .Pos ? self.e.lit(n) : self.e.neg(self.e.lit(n)) }
     }
 
-    func neg(_ e: @escaping (Ctx) -> E.repr) -> (Ctx) -> E.repr {
+    func neg(_ e: @escaping repr) -> repr {
         return { $0 == .Pos ? e(.Neg) : e(.Pos) }
     }
 
-    func add(_ e1: @escaping (Ctx) -> E.repr, _ e2: @escaping (Ctx) -> E.repr) -> (Ctx) -> E.repr {
+    func add(_ e1: @escaping repr, _ e2: @escaping repr) -> repr {
         return { self.e.add(e1($0), e2($0)) }
     }
 }
 
-
+tf1(ExpPushNegSym(StringExpSym()))(.Pos)
